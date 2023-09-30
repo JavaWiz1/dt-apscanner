@@ -15,7 +15,7 @@ pip install ap_scanner
 
 or for source code:
 
-git clone https://github.com/xxxxxxx
+git clone https://github.com/JavaWiz1/ap_scanner.git
 
 ### <u>Usage:</u>
 ```
