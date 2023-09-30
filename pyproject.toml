@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ap_scanner"
+version = "0.1.0"
+description = "Wifi AP scanner tool"
+authors = ["Al D'Amico <JavaWiz1@hotmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+scapy = "^2.5"
+loguru = "^0.7"
+
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "piwheels"
+url = "https://www.piwheels.org/simple"
+priority = "supplemental"
+
+[tool.poetry.scripts]
+ap_scanner = 'ap_scanner:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
