@@ -13,8 +13,6 @@ from loguru import logger as LOGGER
 
 # ============================================================================================================================   
 # TODO: 
-# - for windows:    verify we have available wifi adapter
-# - for linux:      verify we have available wifi adapter
 # - Add version to output description
 # - Update pyproject.toml to create script shortcuts
 # - build test suites for unit testing
@@ -460,8 +458,11 @@ class NetworkManagerWiFiScanner(ScannerBase):
     @classmethod
     def is_running(cls) -> bool:
         nmcli_output = cls._execute_process('nmcli')
-        if "is not running" in nmcli_output:
-            return False
+        LOGGER.debug(f'nmcli is running output:')
+        LOGGER.debug(nmcli_output)
+        for line in nmcli_output:
+            if "is not running" in line:
+                return False
         return True
     
     def _resolve_band(self, freq_str: str) -> str:
@@ -605,7 +606,7 @@ def display_csv(ap_list: List[AccessPoint]):
 def wifi_adapters() -> List[str]:
     adapters: List[str] = []
     if running_on_linux():
-        cmd_output = ScannerBase._execute_process('iwlist')
+        cmd_output = ScannerBase._execute_process('iwconfig', show_feedback=False)
         if len(cmd_output) > 0:
             for line in cmd_output:
                 if 'ESSID' in line:
@@ -617,6 +618,7 @@ def wifi_adapters() -> List[str]:
                 if line.strip().startswith('Name'):
                     adapters.append(line.split(':')[1].strip())
 
+    LOGGER.debug(f'- Wifi adapters: {", ".join(adapters)}')
     if len(adapters) > 0:
         return adapters
     

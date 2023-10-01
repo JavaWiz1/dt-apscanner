@@ -1,4 +1,5 @@
 *.pyc
 *.lock
+*.txt
 test_data/*
 dist/*
