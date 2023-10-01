@@ -770,6 +770,7 @@ and list related information.
     # Remove root logger and create console logger
     LOGGER.remove(0) 
     h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=CONSTANTS.CONSOLE_LOGFORMAT)
+    ScannerBase.logging_level = LOG_LVL
     
     LOGGER.info('-'*len(desc))
     LOGGER.info(desc)
@@ -848,7 +849,6 @@ and list related information.
     if args.save: 
         scanner.set_output_capture_file(args.save)
 
-    ScannerBase.logging_level = LOG_LVL
     ap_list = scanner.scan_for_access_points()
     if ap_list is None or len(ap_list) == 0:
         LOGGER.error('No Access Points discovered. Process terminating...')
