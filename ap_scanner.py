@@ -170,9 +170,10 @@ class ScannerBase(ABC):
 
         # decode it to strings
         lines = cmd_output.decode('ascii').replace('\r', '').splitlines()
-        if cls.logging_level == "TRACE":
+        if ScannerBase.logging_level == "TRACE":
+            LOGGER.trace(f'  RetCd: {return_code}')
             for line in lines:
-                LOGGER.trace(line)
+                LOGGER.trace(f'  {line}')
         return lines, return_code
     
     def _get_raw_data(self) -> List[str]:
@@ -238,7 +239,7 @@ class WindowsWiFiScanner(ScannerBase):
                         bssid_list.append(bssid_info)
                     ap = AccessPoint(ssid_info, bssid_list)
                     ap_list.append(ap)
-                    LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                    LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                 name = value if len(value) > 0 else CONSTANTS.HIDDEN
                 ssid_info = SSID(name)
                 bssid_info = BSSID(CONSTANTS.UNKNOWN)
@@ -268,7 +269,7 @@ class WindowsWiFiScanner(ScannerBase):
                 bssid_list.append(bssid_info)
             ap = AccessPoint(ssid_info, bssid_list)
             ap_list.append(ap)        
-            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+            LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return ap_list
 
@@ -280,7 +281,7 @@ class WindowsWiFiScanner(ScannerBase):
             if line.startswith("All User Profile"):
                 profile_name = line.split(':')[1].strip()
                 profiles.append(profile_name)
-                LOGGER.trace(f' found profile: {profile_name}')
+                LOGGER.trace(f'  found profile: {profile_name}')
         
         return profiles
 
@@ -294,7 +295,7 @@ class WindowsWiFiScanner(ScannerBase):
                 if "Connect automatically" in line:
                     auto_connect = True
                 break
-        LOGGER.trace(f' profile autoconnect is: {auto_connect}')
+        LOGGER.trace(f'  profile autoconnect is: {auto_connect}')
         return auto_connect
     
     def _connected_to_profiles(self) -> Dict[str, AccessPoint]:
@@ -345,7 +346,7 @@ class WindowsWiFiScanner(ScannerBase):
                 ap = AccessPoint(ssid_info, [bssid_info])
                 connected_profiles[profile] = ap
 
-        if self.logging_level == "TRACE":
+        if ScannerBase.logging_level == "TRACE":
             LOGGER.trace('  connected profiles:')
             for profile in connected_profiles:
                 LOGGER.trace(f'    {profile}')
@@ -378,12 +379,12 @@ class IwWiFiScanner(ScannerBase):
                     if ap is not None and ap.ssid.name != CONSTANTS.HIDDEN:
                         ap.bssid.append(bssid_info)
                         results[idx] = ap
-                        LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
+                        LOGGER.debug(f'  Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
                     else:
                         bssid_list.append(bssid_info)
                         ap = AccessPoint(ssid_info, bssid_list)
                         results.append(ap)
-                        LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                        LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                     ssid_info = SSID(CONSTANTS.UNKNOWN)
                     bssid_info = BSSID(CONSTANTS.UNKNOWN)
                     bssid_list = []
@@ -410,12 +411,12 @@ class IwWiFiScanner(ScannerBase):
             if ap is not None:
                 ap.bssid.append(bssid_info)
                 results[idx] = ap
-                LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
+                LOGGER.debug(f'  Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
             else:
                 bssid_list.append(bssid_info)
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)
-                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
     
@@ -462,7 +463,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
                 # We have full definition, append to list
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)
-                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
             if len(ssid) > 0:
                 last_ssid = ssid
                 # Start creating new entry
@@ -483,7 +484,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
             # Append last entry
             ap = AccessPoint(ssid_info, bssid_list)
             results.append(ap)
-            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+            LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
     
@@ -539,12 +540,12 @@ class IwlistWiFiScanner(ScannerBase):
                         if ap is not None:
                             ap.bssid.append(bssid_info)
                             results[idx] = ap
-                            LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
+                            LOGGER.debug(f'  Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
                         else:
                             bssid_list.append(bssid_info)
                             ap = AccessPoint(ssid_info, bssid_list)
                             results.append(ap)
-                            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                            LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                         ssid_info = SSID(CONSTANTS.UNKNOWN)
                         bssid_info = BSSID(CONSTANTS.UNKNOWN)
                         bssid_list = []
@@ -572,12 +573,12 @@ class IwlistWiFiScanner(ScannerBase):
             if ap is not None:
                 ap.bssid.append(bssid_info)
                 results[idx] = ap
-                LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
+                LOGGER.debug(f'  Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
             else:
                 bssid_list.append(bssid_info)
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)            
-                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
+                LOGGER.debug(f'  Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
 
@@ -602,7 +603,7 @@ class IwlistWiFiScanner(ScannerBase):
         elif freq_str.startswith('5.'):
             band = CONSTANTS.BAND5
 
-        LOGGER.trace(f'    {freq_str} resolves to {band}')
+        LOGGER.trace(f'  {freq_str} resolves to {band}')
         return band
     
 
@@ -670,7 +671,6 @@ def wifi_adapters() -> List[str]:
                 if line.strip().startswith('Name'):
                     adapters.append(line.split(':')[1].strip())
 
-    LOGGER.debug(f'- Wifi adapters: {", ".join(adapters)}')
     if len(adapters) > 0:
         return adapters
     
@@ -788,7 +788,7 @@ and list related information.
         LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
         return -1
     else:
-        LOGGER.info(f'- Wifi adapter(s): {", ".join(adapters)}')
+        LOGGER.info(f'- Wifi adapter(s) detected: {", ".join(adapters)}')
 
     if args.interface:
         iface_list = adapter_list()
@@ -848,7 +848,7 @@ and list related information.
     if args.save: 
         scanner.set_output_capture_file(args.save)
 
-    scanner.logging_level = LOG_LVL
+    ScannerBase.logging_level = LOG_LVL
     ap_list = scanner.scan_for_access_points()
     if ap_list is None or len(ap_list) == 0:
         LOGGER.error('No Access Points discovered. Process terminating...')
