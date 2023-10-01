@@ -106,7 +106,7 @@ class AdapterInfo:
                 self.SSID = line.split('ESSID:')[1].strip()
                 continue
             if "Frequency:" in line:
-                token = line.split('Frequency:').split()
+                token = line.split('Frequency:')[1].strip()
                 if token.startswith('2'):
                     self.radio_type = "2.4 GHz"
                 elif token.startswith('5'):
