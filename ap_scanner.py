@@ -114,7 +114,7 @@ class AdapterInfo:
             if "Access Point:" in line:
                 self.BSSID = line.split('Access Point:')[1].strip()
             if "Bit Rate=" in line:
-                self.receive_rate = line.split('BitRate=')[1].split()[0]
+                self.receive_rate = line.split('Bit Rate=')[1].split()[0]
                 self.transmit_rate = self.receive_rate
             if "Link Quality=" in line:
                 txt_sig = line.split('=')[1].split()[0]
