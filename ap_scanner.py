@@ -93,7 +93,40 @@ class AdapterInfo:
             raise NameError(f'No adapter exists named "{self.name}"')
         
     def _get_linux_adapter(self) -> bool:
+        # iw wlan0 info = channel, mhz, mac
+        iwconfig_output = ScannerBase._execute_process('iwconfig', show_feedback=False)
         adapter_found = False
+        for line in iwconfig_output:
+            line = line.strip()
+            if 'ESSID' in line:
+                if adapter_found:
+                    # done, bail
+                    break
+                adapter_found = True
+                self.SSID = line.split('ESSID:')[1].strip()
+                continue
+            if "Frequency:" in line:
+                token = line.split('Frequency:').split()
+                if token.startswith('2'):
+                    self.radio_type = "2.4 GHz"
+                elif token.startswith('5'):
+                    self.radio_type = '5 GHz'
+            if "Access Point:" in line:
+                self.BSSID = line.split('Access Point:')[1].strip()
+            if "Bit Rate=" in line:
+                self.receive_rate = line.split('BitRate=')[1].split()[0]
+                self.transmit_rate = self.receive_rate
+            if "Link Quality=" in line:
+                txt_sig = line.split('=')[1].split()[0]
+                signals = txt_sig.split('/')
+                self.signal = int(int(signals[0]) / int(signals[1]) * 100)
+            # self.Authentication
+            # self.channel
+            # self.cipher
+            # self.connected
+            # self.desc
+            # self.mac
+            # self.radio_type
 
         return adapter_found
     
