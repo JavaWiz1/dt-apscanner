@@ -30,6 +30,11 @@ class CONSTANTS:
     LINUX = "Linux"
     FILE_LOGFORMAT = "<green>{time:MM/DD/YY HH:mm:ss}</green> |<level>{level: <8}</level>|<cyan>{name:10}</cyan>|<cyan>{line:3}</cyan>| <level>{message}</level>"
     CONSOLE_LOGFORMAT = "<level>{message}</level>"
+    NMCLI = '/usr/bin/nmcli'
+    IW = '/usr/sbin/iw'
+    IWLIST = '/usr/sbin/iwlist'
+    IWCONFIG = '/usr/sbin/iwconfig'
+    IFCONFIG = '/usr/sbin/ifconfig'
 
 AUTH_MAP = {
     "PSK": "WPA2-Personal",
@@ -91,7 +96,7 @@ class ScannerBase(ABC):
         if self.test_datafile is not None:
             cmd_output = self._get_raw_data()
         else:
-            cmd = self.scan_cmd.replace('{interface}', self.interface)
+            cmd = self.scan_cmd.replace('%interface%', self.interface)
             cmd_output = self._execute_process(cmd)
             if self.output_datafile:
                 try:
@@ -328,7 +333,7 @@ class WindowsWiFiScanner(ScannerBase):
     
 # ===========================================================================================================================   
 class IwWiFiScanner(ScannerBase):
-    scan_cmd = 'sudo iw dev {interface} scan'
+    scan_cmd = f'sudo {CONSTANTS.IW} dev %interface% scan'
     
     def scanner_supported_os(self) -> str:
         return "Linux"
@@ -407,7 +412,7 @@ class IwWiFiScanner(ScannerBase):
     
 # ===========================================================================================================================   
 class NetworkManagerWiFiScanner(ScannerBase):
-    scan_cmd = 'nmcli -t -f ssid,bssid,chan,freq,signal,security,rsn-flags device wifi list'
+    scan_cmd = f'{CONSTANTS.NMCLI} -t -f ssid,bssid,chan,freq,signal,security,rsn-flags device wifi list'
 
     def scanner_supported_os(self) -> str:
         return "Linux"
@@ -457,8 +462,8 @@ class NetworkManagerWiFiScanner(ScannerBase):
     
     @classmethod
     def is_running(cls) -> bool:
-        nmcli_output = cls._execute_process('nmcli')
-        LOGGER.debug(f'nmcli is running output:')
+        nmcli_output = cls._execute_process(CONSTANTS.NMCLI)
+        LOGGER.debug(f'nmcli is_running() output:')
         LOGGER.debug(nmcli_output)
         for line in nmcli_output:
             if "is not running" in line:
@@ -475,7 +480,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
 
 # ===========================================================================================================================   
 class IwlistWiFiScanner(ScannerBase):
-    scan_cmd = 'sudo iwlist {interface} scanning'
+    scan_cmd = f'sudo {CONSTANTS.IWLIST} %interface% scanning'
 
     def scanner_supported_os(self) -> str:
         return "Linux"    
@@ -606,7 +611,7 @@ def display_csv(ap_list: List[AccessPoint]):
 def wifi_adapters() -> List[str]:
     adapters: List[str] = []
     if running_on_linux():
-        cmd_output = ScannerBase._execute_process('iwconfig', show_feedback=False)
+        cmd_output = ScannerBase._execute_process(CONSTANTS.IWCONFIG, show_feedback=False)
         if len(cmd_output) > 0:
             for line in cmd_output:
                 if 'ESSID' in line:
@@ -628,7 +633,7 @@ def interface_list() -> List[str]:
     # TODO: Build interface list
     adapters = []
     if running_on_linux():
-        lines = ScannerBase._execute_process('ifconfig -a', False)
+        lines = ScannerBase._execute_process(f'{CONSTANTS.IFCONFIG} -a', False)
         for line in lines:
              if 'flags' in line:
                  iface_name = line.split(':',1)[0].strip()
