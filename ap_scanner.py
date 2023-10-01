@@ -72,7 +72,7 @@ class AdapterInfo:
     desc: str = ''
     mac: str = ''
     connected: bool = False
-    SSID: str = ''
+    SSID: str = 'Not Associated'
     BSSID: str = ''
     radio_type: str = ''
     Authentication: str = ''
@@ -94,7 +94,7 @@ class AdapterInfo:
         
     def _get_linux_adapter(self) -> bool:
         # iw wlan0 info = channel, mhz, mac
-        iwconfig_output = ScannerBase._execute_process('iwconfig', show_feedback=False)
+        iwconfig_output, _ = ScannerBase._execute_process('iwconfig', show_feedback=False)
         adapter_found = False
         for line in iwconfig_output:
             line = line.strip()
@@ -941,7 +941,10 @@ and list related information.
             args.interface = wifi_adapters[0]
 
     wifi_adapter = AdapterInfo(args.interface)
-    LOGGER.info(f'- Scan with adapter "{wifi_adapter.name}" via {wifi_adapter.radio_type} [{wifi_adapter.signal}%]')
+    if wifi_adapter.connected:
+        LOGGER.info(f'- Scan with adapter "{wifi_adapter.name}" via {wifi_adapter.radio_type} [{wifi_adapter.signal}%]')
+    else:
+        LOGGER.info(f'- Scan with adapter "{wifi_adapter.name}"')
     # Check for forced disovery method
     if args.nmcli:  
         scanner = NetworkManagerWiFiScanner(interface=args.interface)
