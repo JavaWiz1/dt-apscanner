@@ -23,7 +23,7 @@ from loguru import logger as LOGGER
 # == Module Variables ========================================================================================================   
 class CONSTANTS:
     UNKNOWN = 'Unknown'
-    HIDDEN = " **hidden**"
+    HIDDEN = "**hidden**"
     BAND24 = '2.4 MHz'
     BAND5  = '5 MHz'
     WINDOWS = "Windows"
@@ -71,7 +71,8 @@ class ScannerBase(ABC):
     interface: str = 'wlan0'
     test_datafile: pathlib.Path = None
     output_datafile: pathlib.Path = None
-    
+    logging_level ="INFO"
+
     @abstractmethod
     def scanner_supported_os(self) -> str:
         LOGGER.warning(f'- Rescan NOT supported for {self.__class__.__name__}')
@@ -157,6 +158,9 @@ class ScannerBase(ABC):
         try:
             if show_feedback:
                 LOGGER.info(f'- Executing: {cmd}')
+            else:
+                LOGGER.debug(f'- Executing: {cmd}')
+            # TODO: How to handle bad return codes and capture output?
             cmd_output = subprocess.check_output(cmd_list, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as cpe:
             #print (netsh_output)
@@ -164,6 +168,9 @@ class ScannerBase(ABC):
 
         # decode it to strings
         lines = cmd_output.decode('ascii').replace('\r', '').splitlines()
+        if cls.logging_level == "TRACE":
+            for line in lines:
+                LOGGER.trace(line)
         return lines
     
     def _get_raw_data(self) -> List[str]:
@@ -226,6 +233,7 @@ class WindowsWiFiScanner(ScannerBase):
                         bssid_list.append(bssid_info)
                     ap = AccessPoint(ssid_info, bssid_list)
                     ap_list.append(ap)
+                    LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                 name = value if len(value) > 0 else CONSTANTS.HIDDEN
                 ssid_info = SSID(name)
                 bssid_info = BSSID(CONSTANTS.UNKNOWN)
@@ -255,6 +263,7 @@ class WindowsWiFiScanner(ScannerBase):
                 bssid_list.append(bssid_info)
             ap = AccessPoint(ssid_info, bssid_list)
             ap_list.append(ap)        
+            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return ap_list
 
@@ -264,7 +273,9 @@ class WindowsWiFiScanner(ScannerBase):
         for line in netsh_output:
             line = line.strip()
             if line.startswith("All User Profile"):
-                profiles.append(line.split(':')[1].strip())
+                profile_name = line.split(':')[1].strip()
+                profiles.append(profile_name)
+                LOGGER.trace(f' found profile: {profile_name}')
         
         return profiles
 
@@ -278,7 +289,7 @@ class WindowsWiFiScanner(ScannerBase):
                 if "Connect automatically" in line:
                     auto_connect = True
                 break
-
+        LOGGER.trace(f' profile autoconnect is: {auto_connect}')
         return auto_connect
     
     def _connected_to_profiles(self) -> Dict[str, AccessPoint]:
@@ -329,6 +340,11 @@ class WindowsWiFiScanner(ScannerBase):
                 ap = AccessPoint(ssid_info, [bssid_info])
                 connected_profiles[profile] = ap
 
+        if self.logging_level == "TRACE":
+            LOGGER.trace('  connected profiles:')
+            for profile in connected_profiles:
+                LOGGER.trace(f'    {profile}')
+
         return connected_profiles
     
 # ===========================================================================================================================   
@@ -357,10 +373,12 @@ class IwWiFiScanner(ScannerBase):
                     if ap is not None and ap.ssid.name != CONSTANTS.HIDDEN:
                         ap.bssid.append(bssid_info)
                         results[idx] = ap
+                        LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
                     else:
                         bssid_list.append(bssid_info)
                         ap = AccessPoint(ssid_info, bssid_list)
                         results.append(ap)
+                        LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                     ssid_info = SSID(CONSTANTS.UNKNOWN)
                     bssid_info = BSSID(CONSTANTS.UNKNOWN)
                     bssid_list = []
@@ -387,10 +405,12 @@ class IwWiFiScanner(ScannerBase):
             if ap is not None:
                 ap.bssid.append(bssid_info)
                 results[idx] = ap
+                LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
             else:
                 bssid_list.append(bssid_info)
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)
+                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
     
@@ -437,6 +457,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
                 # We have full definition, append to list
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)
+                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
             if len(ssid) > 0:
                 last_ssid = ssid
                 # Start creating new entry
@@ -457,6 +478,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
             # Append last entry
             ap = AccessPoint(ssid_info, bssid_list)
             results.append(ap)
+            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
     
@@ -467,15 +489,20 @@ class NetworkManagerWiFiScanner(ScannerBase):
         LOGGER.debug(nmcli_output)
         for line in nmcli_output:
             if "is not running" in line:
+                LOGGER.trace('nmcli is NOT running')
                 return False
+        LOGGER.trace('nmcli IS running')
         return True
     
     def _resolve_band(self, freq_str: str) -> str:
+        band = ''
         if freq_str.startswith('24'):
-            return CONSTANTS.BAND24
+            band = CONSTANTS.BAND24
         elif freq_str.startswith('5'):
-            return CONSTANTS.BAND5
-        return ''
+            band =  CONSTANTS.BAND5
+
+        LOGGER.trace(f'{freq_str} resolves to {band}')
+        return band
     
 
 # ===========================================================================================================================   
@@ -506,10 +533,12 @@ class IwlistWiFiScanner(ScannerBase):
                         if ap is not None:
                             ap.bssid.append(bssid_info)
                             results[idx] = ap
+                            LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
                         else:
                             bssid_list.append(bssid_info)
                             ap = AccessPoint(ssid_info, bssid_list)
                             results.append(ap)
+                            LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
                         ssid_info = SSID(CONSTANTS.UNKNOWN)
                         bssid_info = BSSID(CONSTANTS.UNKNOWN)
                         bssid_list = []
@@ -537,10 +566,12 @@ class IwlistWiFiScanner(ScannerBase):
             if ap is not None:
                 ap.bssid.append(bssid_info)
                 results[idx] = ap
+                LOGGER.trace(f' Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
             else:
                 bssid_list.append(bssid_info)
                 ap = AccessPoint(ssid_info, bssid_list)
                 results.append(ap)            
+                LOGGER.trace(f' Adding ssid: {ssid_info} with {len(bssid_list)} bssids')
 
         return results
 
@@ -548,15 +579,21 @@ class IwlistWiFiScanner(ScannerBase):
     def is_running(cls) -> bool:
         iwlist_output = cls._execute_process(cls.cmd)
         if "doesn't support scanning" in iwlist_output:
+            LOGGER.trace('iwlist is NOT running')
             return False
+        
+        LOGGER.trace('iwlist IS running')
         return True
 
     def _resolve_band(self, freq_str: str) -> str:
+        band = ''
         if freq_str.startswith('2.4'):
-            return CONSTANTS.BAND24
+            band = CONSTANTS.BAND24
         elif freq_str.startswith('5.'):
-            return CONSTANTS.BAND5
-        return ''
+            band = CONSTANTS.BAND5
+
+        LOGGER.trace(f'    {freq_str} resolves to {band}')
+        return band
     
 
 # == Display output routines =================================================================================================   
@@ -629,7 +666,7 @@ def wifi_adapters() -> List[str]:
     
     return None
 
-def interface_list() -> List[str]:
+def adapter_list() -> List[str]:
     # TODO: Build interface list
     adapters = []
     if running_on_linux():
@@ -648,6 +685,7 @@ def interface_list() -> List[str]:
     else:
         pass # Unsupported OS
 
+    LOGGER.debug(f'- adapters: {", ".join(adapters)}')
     return adapters
 
 def running_on_linux() -> bool:
@@ -702,7 +740,7 @@ and list related information.
     parser.add_argument('-r', '--rescan', action='store_true', default=False, help='(Windows only) force network rescan for APs')
     parser.add_argument('-j', '--json', action='store_true', default=False, help='Output json result')
     parser.add_argument('-c', '--csv', action='store_true', default=False, help='Output csv result')
-    parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Debug/verbose output to console')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help='Debug/verbose output to console')
     if development_mode:
         parser.add_argument('-t', '--test', type=str, default=None, metavar='<filename>', help='Use test data, specify filename')
         parser.add_argument('-s', '--save', type=str, default=None, metavar='<filename>', help='Filename to save (os scan) command output in')
@@ -714,8 +752,10 @@ and list related information.
     args = parser.parse_args()
 
     LOG_LVL = "INFO"
-    if args.verbose:
+    if args.verbose == 1:
         LOG_LVL = "DEBUG"
+    elif args.verbose > 1:
+        LOG_LVL = "TRACE"
 
     # Remove root logger and create console logger
     LOGGER.remove(0) 
@@ -741,9 +781,9 @@ and list related information.
         LOGGER.info(f'- Wifi adapter(s): {", ".join(adapters)}')
 
     if args.interface:
-        iface_list = interface_list()
+        iface_list = adapter_list()
         if args.interface not in iface_list:
-            LOGGER.error(f'- Invalid interface [{args.interface}], valid values: {", ".join(interface_list())}')
+            LOGGER.error(f'- Invalid interface [{args.interface}], valid values: {", ".join(adapter_list())}')
             return -2
     else:
         args.interface = 'wlan0'
@@ -796,8 +836,9 @@ and list related information.
             return -6
     
     if args.save: 
-            scanner.set_output_capture_file(args.save)
+        scanner.set_output_capture_file(args.save)
 
+    scanner.logging_level = LOG_LVL
     ap_list = scanner.scan_for_access_points()
     if ap_list is None or len(ap_list) == 0:
         LOGGER.error('No Access Points discovered. Process terminating...')
