@@ -654,7 +654,7 @@ class IwlistWiFiScanner(ScannerBase):
                     if ssid_info.name != CONSTANTS.UNKNOWN:
                         # New entry, append/update list
                         idx, ap = self._get_ap_ssid_entry(ssid_info.name, bssid_info.mac, results)
-                        if ap is not None:
+                        if ap is not None and ssid_info.name != CONSTANTS.HIDDEN:
                             ap.bssid.append(bssid_info)
                             results[idx] = ap
                             LOGGER.debug(f'  Updating ssid: {ssid_info} with {len(bssid_list)} bssids')
