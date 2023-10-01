@@ -98,8 +98,8 @@ class ScannerBase(ABC):
             cmd_output = self._get_raw_data()
         else:
             cmd = self.scan_cmd.replace('%interface%', self.interface)
-            cmd_output = self._execute_process(cmd)
-            if self.output_datafile:
+            cmd_output, ret_cd = self._execute_process(cmd)
+            if self.output_datafile and ret_cd == 0:
                 try:
                     self.output_datafile.write_text('\n'.join(cmd_output))
                     LOGGER.success(f'- Output saved to: {self.output_datafile}')
@@ -152,8 +152,9 @@ class ScannerBase(ABC):
         return tgt_idx, ap_entry
         
     @classmethod
-    def _execute_process(cls, cmd: str, show_feedback: bool = True) -> List[str]:
+    def _execute_process(cls, cmd: str, show_feedback: bool = True) -> Tuple[List[str], int]:
         """Run the (scan) command and return output as a list of strings"""
+        return_code = 0
         cmd_list = cmd.split()
         try:
             if show_feedback:
@@ -164,14 +165,15 @@ class ScannerBase(ABC):
             cmd_output = subprocess.check_output(cmd_list, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as cpe:
             #print (netsh_output)
-            cmd_output = bytes(f'{repr(cpe)}', 'ascii')
+            cmd_output = bytes(f'retCde: {cpe.returncode} output: {cpe.output}', 'ascii')
+            return_code = cpe.returncode
 
         # decode it to strings
         lines = cmd_output.decode('ascii').replace('\r', '').splitlines()
         if cls.logging_level == "TRACE":
             for line in lines:
                 LOGGER.trace(line)
-        return lines
+        return lines, return_code
     
     def _get_raw_data(self) -> List[str]:
         data_file = pathlib.Path(self.test_datafile)
@@ -211,7 +213,10 @@ class WindowsWiFiScanner(ScannerBase):
                 return False
             
         LOGGER.info('- Disconnect to trigger re-scan of network')
-        netsh_output = self._execute_process(self.cmd_force_rescan)
+        netsh_output, ret_cd = self._execute_process(self.cmd_force_rescan)
+        if ret_cd != 0:
+            return False
+        
         sleep(5)
         return True
     
@@ -269,7 +274,7 @@ class WindowsWiFiScanner(ScannerBase):
 
     def _profiles(self) -> List[str]:
         profiles = []
-        netsh_output = self._execute_process('netsh wlan show profiles', False)
+        netsh_output, _ = self._execute_process('netsh wlan show profiles', False)
         for line in netsh_output:
             line = line.strip()
             if line.startswith("All User Profile"):
@@ -282,7 +287,7 @@ class WindowsWiFiScanner(ScannerBase):
     def _profile_autoconnect(self, profile: str) -> bool:
         auto_connect = False
         cmd = f'netsh wlan show profile {profile}'
-        netsh_output = self._execute_process(cmd, False)
+        netsh_output, _ = self._execute_process(cmd, False)
         for line in netsh_output:
             line = line.strip()
             if line.startswith('Connection mode'):
@@ -302,7 +307,7 @@ class WindowsWiFiScanner(ScannerBase):
         connected = False
         profile = ''
         ap_list = List[AccessPoint]
-        netsh_output = self._execute_process('netsh wlan show interfaces', False)
+        netsh_output, _ = self._execute_process('netsh wlan show interfaces', False)
         for line in netsh_output:
             line = line.strip()
             value = '' if ':' not in line else line.split(':', 1)[1].strip()
@@ -484,9 +489,10 @@ class NetworkManagerWiFiScanner(ScannerBase):
     
     @classmethod
     def is_running(cls) -> bool:
-        nmcli_output = cls._execute_process(CONSTANTS.NMCLI)
-        LOGGER.debug(f'nmcli is_running() output:')
-        LOGGER.debug(nmcli_output)
+        nmcli_output, ret_cd = cls._execute_process(CONSTANTS.NMCLI)
+        if ret_cd != 0:
+            LOGGER.debug(f'nmcli failure ({ret_cd}) output: {nmcli_output}')
+            return False
         for line in nmcli_output:
             if "is not running" in line:
                 LOGGER.trace('nmcli is NOT running')
@@ -577,10 +583,14 @@ class IwlistWiFiScanner(ScannerBase):
 
     @classmethod
     def is_running(cls) -> bool:
-        iwlist_output = cls._execute_process(cls.cmd)
-        if "doesn't support scanning" in iwlist_output:
-            LOGGER.trace('iwlist is NOT running')
+        iwlist_output, ret_cd = cls._execute_process(cls.cmd)
+        if ret_cd != 0:
+            LOGGER.debug(f'iwlist failure ({ret_cd}) output: {iwlist_output}')
             return False
+        for line in iwlist_output:
+            if "doesn't support scanning" in line:
+                LOGGER.trace('iwlist is NOT running')
+                return False
         
         LOGGER.trace('iwlist IS running')
         return True
@@ -648,14 +658,14 @@ def display_csv(ap_list: List[AccessPoint]):
 def wifi_adapters() -> List[str]:
     adapters: List[str] = []
     if running_on_linux():
-        cmd_output = ScannerBase._execute_process(CONSTANTS.IWCONFIG, show_feedback=False)
-        if len(cmd_output) > 0:
+        cmd_output, ret_cd = ScannerBase._execute_process(CONSTANTS.IWCONFIG, show_feedback=False)
+        if ret_cd == 0:
             for line in cmd_output:
                 if 'ESSID' in line:
                     adapters.append(line.split()[0].strip())
     elif running_on_windows():
-        cmd_output = ScannerBase._execute_process('netsh wlan show interfaces', show_feedback=False)
-        if len(cmd_output) > 0:
+        cmd_output, ret_cd = ScannerBase._execute_process('netsh wlan show interfaces', show_feedback=False)
+        if ret_cd == 0:
             for line in cmd_output:
                 if line.strip().startswith('Name'):
                     adapters.append(line.split(':')[1].strip())
@@ -670,14 +680,14 @@ def adapter_list() -> List[str]:
     # TODO: Build interface list
     adapters = []
     if running_on_linux():
-        lines = ScannerBase._execute_process(f'{CONSTANTS.IFCONFIG} -a', False)
+        lines, _ = ScannerBase._execute_process(f'{CONSTANTS.IFCONFIG} -a', False)
         for line in lines:
              if 'flags' in line:
                  iface_name = line.split(':',1)[0].strip()
                  adapters.append(iface_name)
                  
     elif running_on_windows():
-        lines = ScannerBase._execute_process('ipconfig /all', False)
+        lines, _ = ScannerBase._execute_process('ipconfig /all', False)
         for line in lines:
             if 'adapter' in line and '* ' not in line:
                 iface_name = line.split('adapter')[1].replace(':','').strip()
