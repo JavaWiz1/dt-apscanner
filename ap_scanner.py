@@ -11,7 +11,17 @@ from typing import Dict, List, Tuple
 
 from loguru import logger as LOGGER
 
-
+# ============================================================================================================================   
+# TODO: 
+# - for windows:    verify we have available wifi adapter
+# - for linux:      verify we have available wifi adapter
+# - Add version to output description
+# - Update pyproject.toml to create script shortcuts
+# - build test suites for unit testing
+#
+# Tests:
+#   scanner.supported_os()
+#   
 # == Module Variables ========================================================================================================   
 class CONSTANTS:
     UNKNOWN = 'Unknown'
@@ -30,7 +40,6 @@ AUTH_MAP = {
     "802.1x": "WPA2-Enterprise",
     "WPA1 WPA2 802.1X": "WPA2-Enterprise"
 }
-
 
 @dataclass
 class BSSID:
@@ -187,10 +196,8 @@ class WindowsWiFiScanner(ScannerBase):
                 autoconnect_enabled = True
         
         if not autoconnect_enabled:
-            from dt_tools.console.console_helper import \
-                ConsoleInputHelper as console
             LOGGER.warning('  There are no wifi autoconnections enabled, you will have to manually recoonect to network.')
-            if console.get_input_with_timeout('  continue (y/n)? ',['y','n']) == 'n':
+            if get_input('  continue (y/n)? ',['y','n']) == 'n':
                 return False
             
         LOGGER.info('- Disconnect to trigger re-scan of network')
@@ -594,7 +601,26 @@ def display_csv(ap_list: List[AccessPoint]):
             print(f'{ssid_info},{bssid_info}')
 
 
-# == Helper routines =========================================================================================================   
+# == Helper routines =========================================================================================================
+def wifi_adapters() -> List[str]:
+    adapters: List[str] = []
+    if running_on_linux():
+        cmd_output = ScannerBase._execute_process('iwlist | grep ESSID')
+        if len(cmd_output) > 0:
+            for line in cmd_output:
+                adapters.append(line.split()[0].strip())
+    elif running_on_windows():
+        cmd_output = ScannerBase._execute_process('netsh wlan show interfaces', show_feedback=False)
+        if len(cmd_output) > 0:
+            for line in cmd_output:
+                if line.strip().startswith('Name'):
+                    adapters.append(line.split(':')[1].strip())
+
+    if len(adapters) > 0:
+        return adapters
+    
+    return None
+
 def interface_list() -> List[str]:
     # TODO: Build interface list
     adapters = []
@@ -622,15 +648,28 @@ def running_on_linux() -> bool:
 def running_on_windows() -> bool:
     return platform.system() == "Windows"
 
+def get_input(prompt: str, valid_responses: list = [], default: str = None) -> str:
+    """
+    Prompt for input with a timer
+    Parameters:
+        prompt          - req - text to display
+        valid_responses - opt - stringco or list of valid responses (default None)
+        default         - opt - default vault returned (default None)
+    """
+    valid_input = False
+    while not valid_input:
+        response = input(prompt)
+        if not valid_responses:
+            LOGGER.debug('no valid responses to check')
+            valid_input = True
+        else:
+            if response in valid_responses:
+                valid_input = True
+
+    return response
+
 
 # == Main Entrypoint =========================================================================================================   
-# TODO: 
-# - Push up to github repo
-# - Add version to output description
-# - Upday pyproject.toml to create script shortcuts
-# - add link to github in epilog (for detail info)
-# - build test suites for unit testing
-
 def main() -> int:
     desc = 'Scan for wi-fi access points (Networks)'
     epilog = '''
@@ -685,6 +724,12 @@ and list related information.
         # Disable development mode functionality
         args.test = False
         args.save = False
+
+    adapters = wifi_adapters()
+    if adapters is None:
+        LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
+    else:
+        LOGGER.info(f'- Wifi adapter(s): {", ".join(adapters)}')
 
     if args.interface:
         iface_list = interface_list()

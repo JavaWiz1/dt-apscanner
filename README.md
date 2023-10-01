@@ -95,3 +95,4 @@ YetAnotherLAN             Open            None       F4-CE-A2-BC-BD-B1   47%  Un
 
 ### <u>TODOs:</u>
 - Identify Band (i.e 2.4MHz / 5Mhs) on Windows
+- Radio identification for Linux
