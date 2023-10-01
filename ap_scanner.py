@@ -489,16 +489,16 @@ class NetworkManagerWiFiScanner(ScannerBase):
         return results
     
     @classmethod
-    def is_running(cls) -> bool:
-        nmcli_output, ret_cd = cls._execute_process(CONSTANTS.NMCLI)
+    def is_available(cls) -> bool:
+        nmcli_output, ret_cd = cls._execute_process(CONSTANTS.NMCLI, show_feedback=False)
         if ret_cd != 0:
-            LOGGER.debug(f'nmcli failure ({ret_cd}) output: {nmcli_output}')
+            LOGGER.debug(f'- nmcli failure ({ret_cd}) output: {nmcli_output}')
             return False
         for line in nmcli_output:
             if "is not running" in line:
-                LOGGER.trace('nmcli is NOT running')
+                LOGGER.info('- nmcli is NOT available')
                 return False
-        LOGGER.trace('nmcli IS running')
+        LOGGER.debug('- nmcli IS available')
         return True
     
     def _resolve_band(self, freq_str: str) -> str:
@@ -508,7 +508,7 @@ class NetworkManagerWiFiScanner(ScannerBase):
         elif freq_str.startswith('5'):
             band =  CONSTANTS.BAND5
 
-        LOGGER.trace(f'{freq_str} resolves to {band}')
+        # LOGGER.trace(f'{freq_str} resolves to {band}')
         return band
     
 
@@ -583,17 +583,17 @@ class IwlistWiFiScanner(ScannerBase):
         return results
 
     @classmethod
-    def is_running(cls) -> bool:
+    def is_available(cls) -> bool:
         iwlist_output, ret_cd = cls._execute_process(cls.cmd)
         if ret_cd != 0:
-            LOGGER.debug(f'iwlist failure ({ret_cd}) output: {iwlist_output}')
+            LOGGER.info(f'- iwlist failure ({ret_cd}) output: {iwlist_output}')
             return False
         for line in iwlist_output:
             if "doesn't support scanning" in line:
-                LOGGER.trace('iwlist is NOT running')
+                LOGGER.info('- iwlist is NOT available')
                 return False
         
-        LOGGER.trace('iwlist IS running')
+        LOGGER.debug('- iwlist IS available')
         return True
 
     def _resolve_band(self, freq_str: str) -> str:
@@ -603,7 +603,7 @@ class IwlistWiFiScanner(ScannerBase):
         elif freq_str.startswith('5.'):
             band = CONSTANTS.BAND5
 
-        LOGGER.trace(f'  {freq_str} resolves to {band}')
+        # LOGGER.trace(f'  {freq_str} resolves to {band}')
         return band
     
 
@@ -818,12 +818,15 @@ and list related information.
             LOGGER.info('- Scanner netsh selected (Windows)')
             scanner = WindowsWiFiScanner(args.interface)
         elif running_on_linux():
-            if NetworkManagerWiFiScanner.is_running():
+            if NetworkManagerWiFiScanner.is_available():
                 scanner = NetworkManagerWiFiScanner(args.interface)
                 LOGGER.info('- Scanner nmcli selected (Linux)')
-            else:
+            elif IwlistWiFiScanner.is_available():
                 scanner = IwlistWiFiScanner(args.interface)
                 LOGGER.info('- Scanner iwlist selected (Linux)')
+            else:
+                scanner = IwWiFiScanner(args.interface)
+                LOGGER.info('- Scanner iw selected (Linux)')
         else:
             LOGGER.critical('- OS not supported.')
             return -3
