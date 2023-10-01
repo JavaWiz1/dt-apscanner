@@ -781,13 +781,13 @@ def identify_scanner(interface: str) -> ScannerBase:
     elif running_on_linux():
         if NetworkManagerWiFiScanner.is_available():
             scanner = NetworkManagerWiFiScanner(interface)
-            LOGGER.info('- Linux Scanner nmcli selected')
+            # LOGGER.info('- Linux Scanner nmcli selected')
         elif IwlistWiFiScanner.is_available():
             scanner = IwlistWiFiScanner(interface)
-            LOGGER.info('- Linux Scanner iwlist selected')
+            # LOGGER.info('- Linux Scanner iwlist selected')
         else:
             scanner = IwWiFiScanner(interface)
-            LOGGER.info('- Linux Scanner iw selected')
+            # LOGGER.info('- Linux Scanner iw selected')
     else:
         LOGGER.critical('- OS not supported.')
 
@@ -928,7 +928,7 @@ and list related information.
         LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
         return -1
     else:
-        LOGGER.info(f'- Wifi adapter(s) detected: {", ".join(wifi_adapters)}')
+        LOGGER.info(f'- {len(wifi_adapters)} Wifi adapter(s) detected: {", ".join(wifi_adapters)}')
 
     if args.interface:
         iface_list = adapter_list()
@@ -942,9 +942,9 @@ and list related information.
 
     wifi_adapter = AdapterInfo(args.interface)
     if wifi_adapter.connected:
-        LOGGER.info(f'- Scan with adapter "{wifi_adapter.name}" via {wifi_adapter.radio_type} [{wifi_adapter.signal}%]')
+        LOGGER.info(f'- "{wifi_adapter.name}" will be used to scan via {wifi_adapter.radio_type} [{wifi_adapter.signal}%]')
     else:
-        LOGGER.info(f'- Scan with adapter "{wifi_adapter.name}"')
+        LOGGER.info(f'- "{wifi_adapter.name}" will be used to scan')
     # Check for forced disovery method
     if args.nmcli:  
         scanner = NetworkManagerWiFiScanner(interface=args.interface)
@@ -998,6 +998,7 @@ and list related information.
     else:
         display_access_points(ap_list)
 
+    LOGGER.info('')
     return 0
 
 
