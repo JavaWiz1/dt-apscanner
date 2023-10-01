@@ -702,8 +702,8 @@ class IwlistWiFiScanner(ScannerBase):
     @classmethod
     def is_available(cls) -> bool:
         iwlist_output, ret_cd = cls._execute_process(CONSTANTS.IWLIST)
-        if ret_cd != 0:
-            LOGGER.info(f'- iwlist failure ({ret_cd}) output: {iwlist_output}')
+        if "Usage: " not in iwlist_output[0]:
+            LOGGER.info(f'- iwlist failure ({ret_cd}) output: {"/n".join(iwlist_output)}')
             return False
         for line in iwlist_output:
             if "doesn't support scanning" in line:
