@@ -605,10 +605,11 @@ def display_csv(ap_list: List[AccessPoint]):
 def wifi_adapters() -> List[str]:
     adapters: List[str] = []
     if running_on_linux():
-        cmd_output = ScannerBase._execute_process('iwlist | grep ESSID')
+        cmd_output = ScannerBase._execute_process('iwlist')
         if len(cmd_output) > 0:
             for line in cmd_output:
-                adapters.append(line.split()[0].strip())
+                if 'ESSID' in line:
+                    adapters.append(line.split()[0].strip())
     elif running_on_windows():
         cmd_output = ScannerBase._execute_process('netsh wlan show interfaces', show_feedback=False)
         if len(cmd_output) > 0:
@@ -728,6 +729,7 @@ and list related information.
     adapters = wifi_adapters()
     if adapters is None:
         LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
+        return -1
     else:
         LOGGER.info(f'- Wifi adapter(s): {", ".join(adapters)}')
 
@@ -735,7 +737,7 @@ and list related information.
         iface_list = interface_list()
         if args.interface not in iface_list:
             LOGGER.error(f'- Invalid interface [{args.interface}], valid values: {", ".join(interface_list())}')
-            return -1
+            return -2
     else:
         args.interface = 'wlan0'
     
@@ -766,11 +768,11 @@ and list related information.
                 LOGGER.info('- Scanner iwlist selected (Linux)')
         else:
             LOGGER.critical('- OS not supported.')
-            return -2
+            return -3
     
     if args.test:
         if not scanner.set_test_datafile(args.test):
-            return -3
+            return -4
         elif args.rescan:
             LOGGER.warning('- TEST MODE: rescan otion ignored')
             args.rescan = False
@@ -780,11 +782,11 @@ and list related information.
     else:
         if not scanner.os_check():
             LOGGER.critical(f'Invalid scanner - {scanner.__class__.__name__} only valid for {scanner.scanner_supported_os()}')
-            return -4
+            return -5
 
     if args.rescan:
         if not scanner.rescan():
-            return -5
+            return -6
     
     if args.save: 
             scanner.set_output_capture_file(args.save)
