@@ -10,6 +10,8 @@ from time import sleep
 from typing import Dict, List, Tuple
 
 from loguru import logger as LOGGER
+from importlib.metadata import version
+
 
 # ============================================================================================================================   
 # TODO: 
@@ -205,12 +207,14 @@ class ScannerBase(ABC):
         pass
 
     def scan_for_access_points(self) -> List[AccessPoint]:
+        LOGGER.info('')
+        LOGGER.info(f'Scan for access points ({self.__class__.__name__})')
         cmd_output = self._scan()
-        LOGGER.info('- Process results of scan')
+        LOGGER.info('')
+        LOGGER.info('Process results of scan')
         return self._process_output(cmd_output)
     
     def _scan(self) -> List[AccessPoint]:
-        LOGGER.info(f'Scan for access points ({self.__class__.__name__})')
         if self.test_datafile is not None:
             cmd_output = self._get_raw_data()
         else:
@@ -317,6 +321,7 @@ class WindowsWiFiScanner(ScannerBase):
         return "Windows"
     
     def rescan(self) -> bool:
+        LOGGER.info('')
         LOGGER.info('Rescan requested')
         connections_dict = self._connected_to_profiles()
         autoconnect_enabled = False
@@ -911,9 +916,15 @@ and list related information.
     h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=CONSTANTS.CONSOLE_LOGFORMAT)
     ScannerBase.logging_level = LOG_LVL
     
-    LOGGER.info('-'*len(desc))
-    LOGGER.info(desc)
-    LOGGER.info('-'*len(desc))
+    header_width = len(desc) + 20
+    title = f'{parser.prog} v{version(parser.prog)}'.center(header_width-4, ' ')
+    display_desc = desc.center(header_width-4, ' ')
+    LOGGER.info('='*header_width)
+    LOGGER.info(f'=={title}==')
+    LOGGER.info('='*header_width)
+    LOGGER.info(f'=={display_desc}==')
+    LOGGER.info('='*header_width)
+    LOGGER.info('')
     LOGGER.info('Validate command line options')
     
     if development_mode:
@@ -1001,6 +1012,7 @@ and list related information.
     LOGGER.info('')
     return 0
 
+    return version('ap_scanner')
 
 if __name__ == "__main__":
     sys.exit(main())
