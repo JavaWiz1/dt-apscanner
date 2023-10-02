@@ -1,25 +1,34 @@
 # ap_scanner
 
+
 ## Command Line Access Point (AP) scanning tool 
 
 
 ### <u>Overview:</u>
-This utility will scan for network APs (Access Points) using underlying OS utilities and list related AP information.
+This python utility will scan for network Access Points (APs) using underlying OS utilities and list related AP information.
 
 - Supports Linux and Windows. 
 - Output options include: formatted (default), csv and json
 
 
 ### <u>Install:</u>
+```
 pip install ap_scanner
+```
 
 or for source code:
 
+```
 git clone https://github.com/JavaWiz1/ap_scanner.git
+```
+
+Note: poetry is used for dependency management and packaging
 
 ### <u>Usage:</u>
 ```
-ap_scanner [-h] [-i <iface>] [-r] [-j] [-c] [-v] [-t <filename>] [-s <filename>] [--nmcli] [--iwlist] [--iw] [--netsh]
+usage: ap_scanner [-h] [-i <iface>] [-r] [-j] [-c] [-v] [--nmcli] [--iwlist] [--iw] [--netsh]
+
+Scan for wi-fi access points (Networks)
 
 options:
   -h, --help            show this help message and exit
@@ -33,6 +42,12 @@ options:
   --iwlist              Force Linux iwlist discovery
   --iw                  Force Linux iw discover
   --netsh               Force Windows netsh discovery
+
+This utility will scan for network APs (Access Points) using underlying OS utilities
+and list related information.
+
+- Supports Linux and Windows.
+- Output options include: formatted (default), csv and json
 ```
 
 
@@ -40,49 +55,65 @@ options:
 Windows - trigger re-scan to get most current list of access points
 ```
 > ap_scanner -r
----------------------------------------
-Scan for wi-fi access points (Networks)
----------------------------------------
-- Scanner netsh selected (Windows)
+===========================================================
+==                   ap_scanner v0.1.1                   ==
+===========================================================
+==        Scan for wi-fi access points (Networks)        ==
+===========================================================
+
+Validate command line options
+- 1 Wifi adapter(s) detected: Wi-Fi
+- "Wi-Fi" will be used to scan via 802.11ac [99%]
+- Windows Scanner netsh selected
+
 Rescan requested
-- Autoconnect enabled for WiFiLAN1
+- Autoconnect enabled for MyLAN1
 - Disconnect to trigger re-scan of network
-- Executing: netsh wlan disconnect
-Scan for access points (networks)
+
+Scan for access points (WindowsWiFiScanner)
 - Executing: netsh wlan show network mode=bssid
-- Process results of scan
-- 9 APs discovered
+
+Process results of scan
+- 5 APs discovered
 
 SSID                      Auth            Encryption Mac Address       Signal Radio    Band    Channel
 ------------------------- --------------- ---------- ----------------- ------ -------- ------- -------
-WiFiLAN1                  WPA2-Personal   CCMP       88:92:4e:26:05:e0   18%  802.11n  Unknown       1
- **hidden**               WPA2-Enterprise CCMP       dc:ec:69:0a:b0:8b   26%  802.11n  Unknown       1
-                                                     dc:ec:69:0a:b0:8f   28%  802.11n  Unknown       1
-                                                     88:9a:68:1d:3e:17   99%  802.11n  Unknown      11
-                                                     88:9a:68:1d:3e:19   99%  802.11n  Unknown      11
-                                                     88:9a:68:1d:3e:15   99%  802.11n  Unknown      11
-SomeOtherWIFI             WPA2-Personal   CCMP       dc:ec:69:0a:b0:8a   30%  802.11n  Unknown       1
-YetAnotherLAN             Open            None       f4:ce:a2:bc:bd:b1   66%  802.11n  Unknown       1
+MyLAN1                    WPA2-Personal   CCMP       0c:9a:91:2c:bb:28   99%  802.11n  Unknown       3
+                                                     0c:9a:91:2c:bb:2c   99%  802.11ac Unknown      36
+NETGEAR99                 WPA2-Personal   CCMP       b0:41:a0:85:0f:d6   99%  802.11n  Unknown       3
+**hidden**                WPA2-Enterprise CCMP       dc:eb:62:0a:b0:8b   33%  802.11n  Unknown       1
+                                                     42:f1:9a:6d:5c:7b   21%  802.11n  Unknown       1
+                                                     22:47:5c:fa:01:39   18%  802.11ac Unknown       6
+Nirvana                   Open            None       f4:cf:b2:ac:bd:b1   58%  802.11n  Unknown       1
+ThePond                   WPA2-Personal   CCMP       7c:80:26:01:70:de   51%  802.11n  Unknown       1
 ```
 
 Linux - Use wlan2 connection for scan and use Network Manager (nmcli) for discovery
 ```
 > ap_scanner -i wlan2 --nmcli
----------------------------------------
-Scan for wi-fi access points (Networks)
----------------------------------------
-- Scanner nmcli requested (Linux)
-Scan for access points (networks)
-- Process results of scan
-- 8 APs discovered
+===========================================================
+==                   ap_scanner v0.1.1                   ==
+===========================================================
+==        Scan for wi-fi access points (Networks)        ==
+===========================================================
+
+Validate command line options
+- 1 Wifi adapter(s) detected: wlan2
+- "wlan2" will be used to scan
+
+Scan for access points (NetworkManagerWiFiScanner)
+- Executing: /usr/bin/nmcli -t -f ssid,bssid,chan,freq,signal,security,rsn-flags device wifi list
+
+Process results of scan
+- 5 APs discovered
 
 SSID                      Auth            Encryption Mac Address       Signal Radio    Band    Channel
 ------------------------- --------------- ---------- ----------------- ------ -------- ------- -------
-WiFiLAN1                  WPA2-Personal   CCMP       0C-9E-92-2C-BB-28  100%  Unknown  2.4 MHz       3
-NETGEAR3x                 WPA2-Personal   CCMP       A0-41-A0-85-0F-D6  100%  Unknown  2.4 MHz       3
- **hidden**               WPA2-Personal   CCMP       88-9A-68-1D-3E-1A  100%  Unknown  2.4 MHz      11
- **hidden**               WPA2-Enterprise CCMP       88-9A-68-1D-3E-19  100%  Unknown  2.4 MHz      11
-YetAnotherLAN             Open            None       F4-CE-A2-BC-BD-B1   47%  Unknown  2.4 MHz       1
+MyLAN1                    WPA2-Personal   CCMP       0C-9A-91-2C-BB-28  100%  Unknown  2.4 MHz       3
+NETGEAR99                 WPA2-Personal   CCMP       B0-41-A0-85-0F-D6  100%  Unknown  2.4 MHz       3
+**hidden**                WPA2-Personal   CCMP       88-9E-62-1D-3E-1A  100%  Unknown  2.4 MHz      11
+Nirvana                   Open            None       F4-CF-B2-AC-BD-B1   44%  Unknown  2.4 MHz       1
+ThePond                   WPA2-Personal   CCMP       7C-80-26-01-70-DE   44%  Unknown  2.4 MHz       1
 ```
 
 ### <u>Notes:</u>
@@ -91,10 +122,14 @@ YetAnotherLAN             Open            None       F4-CE-A2-BC-BD-B1   47%  Un
 - You can force which method searches for networks:
   - Linux:   nmcli, iw, iwlist
   - Windows: netsh
+- Tested on
+  - Windows 10/11
+  - Ubuntu Ubuntu 22.04.3 LTS
+  - RaspPi OS - Debian GNU/Linux 11 (bullseye) / Raspbian GNU/Linux 10 (buster)
 
 
-### <u>TODOs:</u>
-- Identify Band (i.e 2.4MHz / 5Mhs) on Windows
-- Radio identification for Linux
+### <u>ToDo:</u>
+- Identify Band (i.e 2.4 MHz / 5 Mhz) on Windows
+- Radio identification for Linux (802.11xx)
 - Add Apple MAC capability
 - Create unit tests

@@ -1,9 +1,11 @@
 [tool.poetry]
 name = "ap_scanner"
-version = "0.1.1"
+version = "0.1.2"
 description = "Wifi AP scanner tool"
 authors = ["JavaWiz <JavaWiz1@hotmail.com>"]
 readme = "README.md"
+
+include = ["CHANGELOG.txt", "*.py"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
