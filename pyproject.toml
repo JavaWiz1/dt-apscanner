@@ -5,7 +5,7 @@ description = "Wifi AP scanner tool"
 authors = ["JavaWiz <JavaWiz1@hotmail.com>"]
 readme = "README.md"
 
-include = ["CHANGELOG.txt", "*.py"]
+include = ["CHANGELOG.md", "*.py"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
