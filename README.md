@@ -89,10 +89,12 @@ YetAnotherLAN             Open            None       F4-CE-A2-BC-BD-B1   47%  Un
 - On windows, you can rescan (-r) and search for current networks
 - You may save the outut of the underlying command into a file (-s)
 - You can force which method searches for networks:
-  o Linux:   nmcli, iw, iwlist
-  o Windows: netsh
+  - Linux:   nmcli, iw, iwlist
+  - Windows: netsh
 
 
 ### <u>TODOs:</u>
 - Identify Band (i.e 2.4MHz / 5Mhs) on Windows
 - Radio identification for Linux
+- Add Apple MAC capability
+- Create unit tests

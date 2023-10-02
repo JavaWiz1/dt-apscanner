@@ -13,15 +13,6 @@ from loguru import logger as LOGGER
 from importlib.metadata import version
 
 
-# ============================================================================================================================   
-# TODO: 
-# - Add version to output description
-# - Update pyproject.toml to create script shortcuts
-# - build test suites for unit testing
-#
-# Tests:
-#   scanner.supported_os()
-#   
 # == Module Variables ========================================================================================================   
 class CONSTANTS:
     UNKNOWN = 'Unknown'
@@ -184,6 +175,7 @@ class AdapterInfo:
 
         return adapter_found
     
+# ============================================================================================================================
 # == Scanner Objects =========================================================================================================   
 @dataclass
 class ScannerBase(ABC):
@@ -729,6 +721,7 @@ class IwlistWiFiScanner(ScannerBase):
         return band
     
 
+# ============================================================================================================================
 # == Display output routines =================================================================================================   
 def todict(obj, classkey=None):
     """Recursively translate object into dictionary"""
@@ -777,24 +770,39 @@ def display_csv(ap_list: List[AccessPoint]):
             print(f'{ssid_info},{bssid_info}')
 
 
+# ============================================================================================================================
 # == Helper routines =========================================================================================================
-def identify_scanner(interface: str) -> ScannerBase:
+def identify_scanner(args: argparse.Namespace) -> ScannerBase:
+
     scanner: ScannerBase = None
-    if running_on_windows():
-        LOGGER.info('- Windows Scanner netsh selected')
-        scanner = WindowsWiFiScanner(interface)
-    elif running_on_linux():
-        if NetworkManagerWiFiScanner.is_available():
-            scanner = NetworkManagerWiFiScanner(interface)
-            # LOGGER.info('- Linux Scanner nmcli selected')
-        elif IwlistWiFiScanner.is_available():
-            scanner = IwlistWiFiScanner(interface)
-            # LOGGER.info('- Linux Scanner iwlist selected')
-        else:
-            scanner = IwWiFiScanner(interface)
-            # LOGGER.info('- Linux Scanner iw selected')
+    if args.nmcli:  
+        scanner = NetworkManagerWiFiScanner(interface=args.interface)
+        LOGGER.info('- Scanner nmcli requested (Linux)')
+    elif args.iwlist:
+        scanner = IwlistWiFiScanner(interface=args.interface)
+        LOGGER.info('- Scanner iwlist requested (Linux)')
+    elif args.iw:
+        scanner = IwWiFiScanner(interface=args.interface)
+        LOGGER.info('- Scanner iw requested (Linux)')
+    elif args.netsh:
+        scanner = WindowsWiFiScanner(interface=args.interface)
+        LOGGER.info('- Scanner netsh requested')
     else:
-        LOGGER.critical('- OS not supported.')
+        if running_on_windows():
+            LOGGER.info('- Windows Scanner netsh selected')
+            scanner = WindowsWiFiScanner(args.interface)
+        elif running_on_linux():
+            if NetworkManagerWiFiScanner.is_available():
+                scanner = NetworkManagerWiFiScanner(args.interface)
+                # LOGGER.info('- Linux Scanner nmcli selected')
+            elif IwlistWiFiScanner.is_available():
+                scanner = IwlistWiFiScanner(args.interface)
+                # LOGGER.info('- Linux Scanner iwlist selected')
+            else:
+                scanner = IwWiFiScanner(args.interface)
+                # LOGGER.info('- Linux Scanner iw selected')
+        else:
+            LOGGER.critical('- OS not supported.')
 
     return scanner    
 
@@ -869,6 +877,7 @@ def get_input(prompt: str, valid_responses: list = [], default: str = None) -> s
     return response
 
 
+# ============================================================================================================================
 # == Main Entrypoint =========================================================================================================   
 def main() -> int:
     desc = 'Scan for wi-fi access points (Networks)'
@@ -957,24 +966,27 @@ and list related information.
     else:
         LOGGER.info(f'- "{wifi_adapter.name}" will be used to scan')
     # Check for forced disovery method
-    if args.nmcli:  
-        scanner = NetworkManagerWiFiScanner(interface=args.interface)
-        LOGGER.info('- Scanner nmcli requested (Linux)')
-    elif args.iwlist:
-        scanner = IwlistWiFiScanner(interface=args.interface)
-        LOGGER.info('- Scanner iwlist requested (Linux)')
-    elif args.iw:
-        scanner = IwWiFiScanner(interface=args.interface)
-        LOGGER.info('- Scanner iw requested (Linux)')
-    elif args.netsh:
-        scanner = WindowsWiFiScanner(interface=args.interface)
-        LOGGER.info('- Scanner netsh requested')
-    else:
-        # Determine scanner based on OS
-        scanner = identify_scanner(args.interface)
-        if scanner is None:
-            return -3
-        
+    # if args.nmcli:  
+    #     scanner = NetworkManagerWiFiScanner(interface=args.interface)
+    #     LOGGER.info('- Scanner nmcli requested (Linux)')
+    # elif args.iwlist:
+    #     scanner = IwlistWiFiScanner(interface=args.interface)
+    #     LOGGER.info('- Scanner iwlist requested (Linux)')
+    # elif args.iw:
+    #     scanner = IwWiFiScanner(interface=args.interface)
+    #     LOGGER.info('- Scanner iw requested (Linux)')
+    # elif args.netsh:
+    #     scanner = WindowsWiFiScanner(interface=args.interface)
+    #     LOGGER.info('- Scanner netsh requested')
+    # else:
+    #     # Determine scanner based on OS
+    #     scanner = identify_scanner(args)
+    #     if scanner is None:
+    #         return -3
+    scanner = identify_scanner(args)
+    if scanner is None:
+        return -3
+            
     if args.test:
         if not scanner.set_test_datafile(args.test):
             return -4
@@ -1011,8 +1023,6 @@ and list related information.
 
     LOGGER.info('')
     return 0
-
-    return version('ap_scanner')
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -2,7 +2,7 @@
 name = "ap_scanner"
 version = "0.1.0"
 description = "Wifi AP scanner tool"
-authors = ["Al D'Amico <JavaWiz1@hotmail.com>"]
+authors = ["JavaWiz <JavaWiz1@hotmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
