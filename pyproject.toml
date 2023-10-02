@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ap_scanner"
-version = "0.1.0"
+version = "0.1.1"
 description = "Wifi AP scanner tool"
 authors = ["JavaWiz <JavaWiz1@hotmail.com>"]
 readme = "README.md"
