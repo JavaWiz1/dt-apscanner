@@ -161,7 +161,7 @@ and list related information.
 
     wifi_adapters = identify_wifi_adapters()
     if wifi_adapters is None:
-        LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
+        LOGGER.critical('- WiFi capabilities required. No Wifi adapter detected.  ABORT')
         return -1
     else:
         LOGGER.info(f'- {len(wifi_adapters)} Wifi adapter(s) detected: {", ".join(wifi_adapters)}')
