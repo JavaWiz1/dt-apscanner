@@ -1,133 +1,21 @@
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from importlib.metadata import version
 from typing import List
 
+from dt_tools.misc.helpers import ObjectHelper
+from dt_tools.net.nic import (CONSTANTS, ScannerBase, WifiAdapterInfo,
+                              identify_all_adapters, identify_wifi_adapters)
+from dt_tools.net.wifi_scanner import (AccessPoint, IwlistWiFiScanner,
+                                       IwWiFiScanner,
+                                       NetworkManagerWiFiScanner,
+                                       WindowsWiFiScanner)
+from dt_tools.os.os_helper import OSHelper
+from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
 
-from utils import *
-from scanner import WindowsWiFiScanner, IwWiFiScanner, IwlistWiFiScanner, NetworkManagerWiFiScanner, ScannerBase
-from scanner import CONSTANTS
-
-
-# == Adapter Object ==========================================================================================================   
-@dataclass 
-class AdapterInfo:
-    name: str
-    desc: str = ''
-    mac: str = ''
-    connected: bool = False
-    SSID: str = 'Not Associated'
-    BSSID: str = ''
-    radio_type: str = ''
-    Authentication: str = ''
-    cipher: str = ''
-    channel: int = -1
-    receive_rate: float = -1.0
-    transmit_rate: float = -1.0
-    signal: int = -1
-
-    def __post_init__(self):
-        if running_on_windows():
-            if not self._get_windows_adapter():
-                raise NameError(f'Unable to identify adapter "{self.name}"')
-        elif running_on_linux():
-            if not self._get_linux_adapter():
-                raise NameError(f'Unable to identify adapter "{self.name}"')
-        else:
-            raise NameError(f'No adapter exists named "{self.name}"')
-        
-    def _get_linux_adapter(self) -> bool:
-        # iw wlan0 info = channel, mhz, mac
-        iwconfig_output, _ = ScannerBase._execute_process('iwconfig', show_feedback=False)
-        adapter_found = False
-        for line in iwconfig_output:
-            line = line.strip()
-            if 'ESSID' in line:
-                if adapter_found:
-                    # done, bail
-                    break
-                adapter_found = True
-                self.SSID = line.split('ESSID:')[1].strip()
-                continue
-            if "Frequency:" in line:
-                token = line.split('Frequency:')[1].strip()
-                if token.startswith('2'):
-                    self.radio_type = "2.4 GHz"
-                elif token.startswith('5'):
-                    self.radio_type = '5 GHz'
-            if "Access Point:" in line:
-                self.BSSID = line.split('Access Point:')[1].strip()
-            if "Bit Rate=" in line:
-                self.receive_rate = line.split('Bit Rate=')[1].split()[0]
-                self.transmit_rate = self.receive_rate
-            if "Link Quality=" in line:
-                txt_sig = line.split('=')[1].split()[0]
-                signals = txt_sig.split('/')
-                self.signal = int(int(signals[0]) / int(signals[1]) * 100)
-            # self.Authentication
-            # self.channel
-            # self.cipher
-            # self.connected
-            # self.desc
-            # self.mac
-            # self.radio_type
-
-        return adapter_found
-    
-    def _get_windows_adapter(self) -> bool:
-        netsh_output, _ = ScannerBase._execute_process(f'netsh wlan show interfaces', show_feedback=False)
-        adapter_found = False
-        for line in netsh_output:
-            line = line.strip()
-            if line.startswith('Name'):
-                if adapter_found:
-                    # Fully processed target name, quit
-                    break
-                else:
-                    adapter_found = True
-                    continue
-            value = '' if len(line.split(':',1)) == 1 else line.split(':',1)[1].strip()
-            if line.startswith('Description'):
-                self.desc = value
-                continue
-            if line.startswith('Physical address'):
-                self.mac = value
-                continue
-            if line.startswith('State'):
-                self.connected = value == 'connected'
-                continue
-            if line.startswith('SSID'):
-                self.SSID = value
-                continue
-            if line.startswith('BSSID'):
-                self.BSSID = value
-                continue
-            if line.startswith('Radio type'):
-                self.radio_type = value
-                continue
-            if line.startswith('Authentication'):
-                self.Authentication = value
-                continue
-            if line.startswith('Cipher'):
-                self.cipher = value
-                continue
-            if line.startswith('Channel'):
-                self.channel = int(value)
-                continue
-            if line.startswith('Receive rate'):
-                self.receive_rate = float(value)
-                continue
-            if line.startswith('Transmit rate'):
-                self.transmit_rate = float(value)
-                continue
-            if line.startswith('Signal'):
-                self.signal = int(value.replace('%',''))
-                continue
-
-        return adapter_found
-    
 
 # ============================================================================================================================
 # == Helper routines =========================================================================================================
@@ -151,67 +39,61 @@ def identify_scanner(args: argparse.Namespace) -> ScannerBase:
         scanner = WindowsWiFiScanner(interface=args.interface)
         LOGGER.info('- Scanner netsh requested')
     else:
-        if running_on_windows():
+        if OSHelper.is_windows():
             LOGGER.info('- Windows Scanner netsh selected')
             scanner = WindowsWiFiScanner(args.interface)
-        elif running_on_linux():
+        elif OSHelper.is_linux():
             if NetworkManagerWiFiScanner.is_available():
                 scanner = NetworkManagerWiFiScanner(args.interface)
-                # LOGGER.info('- Linux Scanner nmcli selected')
             elif IwlistWiFiScanner.is_available():
                 scanner = IwlistWiFiScanner(args.interface)
-                # LOGGER.info('- Linux Scanner iwlist selected')
             else:
                 scanner = IwWiFiScanner(args.interface)
-                # LOGGER.info('- Linux Scanner iw selected')
         else:
             LOGGER.critical('- OS not supported.')
 
     return scanner    
 
-def identify_wifi_adapters() -> List[str]:
-    """Return list of installed wifi adapers, None if not found"""
-    adapters: List[str] = []
-    if running_on_linux():
-        cmd_output, ret_cd = ScannerBase._execute_process(CONSTANTS.IWCONFIG, show_feedback=False)
-        if ret_cd == 0:
-            for line in cmd_output:
-                if 'ESSID' in line:
-                    adapters.append(line.split()[0].strip())
-    elif running_on_windows():
-        cmd_output, ret_cd = ScannerBase._execute_process('netsh wlan show interfaces', show_feedback=False)
-        if ret_cd == 0:
-            for line in cmd_output:
-                if line.strip().startswith('Name'):
-                    adapters.append(line.split(':')[1].strip())
 
-    if len(adapters) > 0:
-        return adapters
-    
-    return None
+def os_check(scanner: ScannerBase) -> bool:
+    """Return True if running on supported OS, else False"""
+    if OSHelper.is_windows() and scanner.scanner_supported_os() == CONSTANTS.WINDOWS:
+        return True
+    elif OSHelper.is_linux() and scanner.scanner_supported_os() == CONSTANTS.LINUX:
+        return True
 
-def adapter_list() -> List[str]:
-    """Return list of ALL installed network adapters"""
-    # TODO: Build interface list
-    adapters = []
-    if running_on_linux():
-        lines, _ = ScannerBase._execute_process(f'{CONSTANTS.IFCONFIG} -a', False)
-        for line in lines:
-             if 'flags' in line:
-                 iface_name = line.split(':',1)[0].strip()
-                 adapters.append(iface_name)
-                 
-    elif running_on_windows():
-        lines, _ = ScannerBase._execute_process('ipconfig /all', False)
-        for line in lines:
-            if 'adapter' in line and '* ' not in line:
-                iface_name = line.split('adapter')[1].replace(':','').strip()
-                adapters.append(iface_name)
-    else:
-        pass # Unsupported OS
+    return False
 
-    LOGGER.debug(f'- adapters: {", ".join(adapters)}')
-    return adapters
+# ============================================================================================================================
+# == Output display routines =================================================================================================
+def display_access_points(ap_list: List[AccessPoint]):
+    """Display formatted AccessPoint output"""
+    LOGGER.info('')
+    LOGGER.info('SSID                      Auth            Encryption Mac Address       Signal Radio    Band    Channel')
+    LOGGER.info('------------------------- --------------- ---------- ----------------- ------ -------- ------- -------')
+    for sidx in range(len(ap_list)):
+        ap = ap_list[sidx]
+        bssid = ap.bssid[0]
+        LOGGER.info(f'{ap.ssid.name:25} {ap.ssid.auth:15} {ap.ssid.encryption:10} {bssid.mac:17} {bssid.signal:4}%  {bssid.radio_type:8} {bssid.band:7} {bssid.channel:7}')
+        for bidx in range(1, len(ap.bssid)):
+            bssid = ap.bssid[bidx]
+            LOGGER.info(f'{" "*52} {bssid.mac:17} {bssid.signal:4}%  {bssid.radio_type:8} {bssid.band:7} {bssid.channel:7}')
+
+def display_json(ap_list: List[AccessPoint]):
+    """Display AccessPoint output in json format"""
+    LOGGER.info('- json output')
+    print(json.dumps(ObjectHelper.to_dict(ap_list),indent=2))
+
+def display_csv(ap_list: List[AccessPoint]):
+    """Display AccessPoint output in csv format"""
+    LOGGER.info('- csv output')
+    print('ssid,auth,encryption,mac,signal,type,band,channel')
+    for ap in ap_list:
+        ssid_info = f'{ap.ssid.name},{ap.ssid.auth},{ap.ssid.encryption}'
+        for bssid in ap.bssid:
+            bssid_info = f'{bssid.mac},{bssid.signal},{bssid.radio_type},{bssid.band},{bssid.channel}'
+            print(f'{ssid_info},{bssid_info}')
+
 
 
 # ============================================================================================================================
@@ -233,7 +115,7 @@ and list related information.
             sys.argv.remove('-d')
             break
 
-    parser = argparse.ArgumentParser(prog="ap_scanner", 
+    parser = argparse.ArgumentParser(prog="dt_apscanner", 
                                      description=desc, formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=epilog)
     parser.add_argument('-i', '--interface', type=str, default=None, metavar='<iface>', help='Interface to use, default=first wireless adapter discovered')
@@ -263,7 +145,7 @@ and list related information.
     ScannerBase.logging_level = LOG_LVL
     
     header_width = len(desc) + 20
-    title = f'{parser.prog} v{version(parser.prog)}'.center(header_width-4, ' ')
+    title = f'{parser.prog} v{ProjectHelper.determine_version(parser.prog)}'.center(header_width-4, ' ')
     display_desc = desc.center(header_width-4, ' ')
     LOGGER.info('='*header_width)
     LOGGER.info(f'=={title}==')
@@ -280,6 +162,7 @@ and list related information.
         args.test = False
         args.save = False
 
+    
     wifi_adapters = identify_wifi_adapters()
     if wifi_adapters is None:
         LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
@@ -288,16 +171,16 @@ and list related information.
         LOGGER.info(f'- {len(wifi_adapters)} Wifi adapter(s) detected: {", ".join(wifi_adapters)}')
 
     if args.interface:
-        iface_list = adapter_list()
+        iface_list = identify_all_adapters()
         if args.interface not in iface_list:
-            LOGGER.error(f'- Invalid interface [{args.interface}], valid values: {", ".join(adapter_list())}')
+            LOGGER.error(f'- Invalid interface [{args.interface}], valid values: {", ".join(identify_all_adapters())}')
             return -2
     else:
         args.interface = 'wlan0'
         if len(wifi_adapters) > 0:
             args.interface = wifi_adapters[0]
 
-    wifi_adapter = AdapterInfo(args.interface)
+    wifi_adapter = WifiAdapterInfo(args.interface)
     if wifi_adapter.connected:
         LOGGER.info(f'- "{wifi_adapter.name}" will be used to scan via {wifi_adapter.radio_type} [{wifi_adapter.signal}%]')
     else:
