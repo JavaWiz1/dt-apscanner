@@ -1,8 +1,6 @@
 import argparse
 import json
 import sys
-from dataclasses import dataclass
-from importlib.metadata import version
 from typing import List
 
 from dt_tools.misc.helpers import ObjectHelper
@@ -95,7 +93,6 @@ def display_csv(ap_list: List[AccessPoint]):
             print(f'{ssid_info},{bssid_info}')
 
 
-
 # ============================================================================================================================
 # == Main Entrypoint =========================================================================================================   
 def main() -> int:
@@ -115,7 +112,7 @@ and list related information.
             sys.argv.remove('-d')
             break
 
-    parser = argparse.ArgumentParser(prog="dt_apscanner", 
+    parser = argparse.ArgumentParser(prog="dt-apscanner", 
                                      description=desc, formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=epilog)
     parser.add_argument('-i', '--interface', type=str, default=None, metavar='<iface>', help='Interface to use, default=first wireless adapter discovered')
@@ -141,10 +138,10 @@ and list related information.
 
     # Remove root logger and create console logger
     LOGGER.remove(0) 
-    h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=CONSTANTS.CONSOLE_LOGFORMAT)
+    h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=CONSTANTS.CONSOLE_LOGFORMAT)  # noqa: F841
     ScannerBase.logging_level = LOG_LVL
     
-    header_width = len(desc) + 20
+    header_width = len(desc) + 60
     title = f'{parser.prog} v{ProjectHelper.determine_version(parser.prog)}'.center(header_width-4, ' ')
     display_desc = desc.center(header_width-4, ' ')
     LOGGER.info('='*header_width)
@@ -162,7 +159,6 @@ and list related information.
         args.test = False
         args.save = False
 
-    
     wifi_adapters = identify_wifi_adapters()
     if wifi_adapters is None:
         LOGGER.critical('WiFi capabilities required. No Wifi adapter detected.  ABORT')
