@@ -4,7 +4,7 @@ import sys
 from typing import List
 
 from dt_tools.misc.helpers import ObjectHelper
-from dt_tools.net.nic import (CONSTANTS, ScannerBase, WifiAdapterInfo,
+from dt_tools.net.nic import (ScannerBase, WifiAdapterInfo,
                               identify_all_adapters, identify_wifi_adapters)
 from dt_tools.net.wifi_scanner import (AccessPoint, IwlistWiFiScanner,
                                        IwWiFiScanner,
@@ -13,7 +13,7 @@ from dt_tools.net.wifi_scanner import (AccessPoint, IwlistWiFiScanner,
 from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
-
+import dt_tools.logger.logging_helper as lh
 
 # ============================================================================================================================
 # == Helper routines =========================================================================================================
@@ -138,7 +138,7 @@ and list related information.
 
     # Remove root logger and create console logger
     LOGGER.remove(0) 
-    h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=CONSTANTS.CONSOLE_LOGFORMAT)  # noqa: F841
+    h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=lh.DEFAULT_CONSOLE_LOGFMT)  # noqa: F841
     ScannerBase.logging_level = LOG_LVL
     
     header_width = len(desc) + 60
