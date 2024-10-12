@@ -11,9 +11,10 @@ include = ["CHANGELOG.md", "*.py"]
 [tool.poetry.dependencies]
 python = "^3.10"
 loguru = "^0.7"
-dt-misc = {path = "../dt-misc", develop = true }
-dt-console = {path = "../dt-console", develop = true }
-dt-net = {path = "../dt-net", develop = true }
+dt-net = "*"
+# dt-misc = {path = "../dt-misc", develop = true }
+# dt-console = {path = "../dt-console", develop = true }
+# dt-net = {path = "../dt-net", develop = true }
 
 [[tool.poetry.source]]
 name = "PyPI"
@@ -25,7 +26,7 @@ url = "https://www.piwheels.org/simple"
 priority = "supplemental"
 
 [tool.poetry.scripts]
-ap_scanner = 'ap_scanner:main'
+dt-apscanner = 'dt_apscanner:main'
 
 [build-system]
 requires = ["poetry-core"]

@@ -3,8 +3,9 @@ import json
 import sys
 from typing import List
 
+import dt_tools.logger.logging_helper as lh
 from dt_tools.misc.helpers import ObjectHelper
-from dt_tools.net.nic import (ScannerBase, WifiAdapterInfo,
+from dt_tools.net.nic import (_CONSTANTS, ScannerBase, WifiAdapterInfo,
                               identify_all_adapters, identify_wifi_adapters)
 from dt_tools.net.wifi_scanner import (AccessPoint, IwlistWiFiScanner,
                                        IwWiFiScanner,
@@ -13,7 +14,7 @@ from dt_tools.net.wifi_scanner import (AccessPoint, IwlistWiFiScanner,
 from dt_tools.os.os_helper import OSHelper
 from dt_tools.os.project_helper import ProjectHelper
 from loguru import logger as LOGGER
-import dt_tools.logger.logging_helper as lh
+
 
 # ============================================================================================================================
 # == Helper routines =========================================================================================================
@@ -55,9 +56,9 @@ def identify_scanner(args: argparse.Namespace) -> ScannerBase:
 
 def os_check(scanner: ScannerBase) -> bool:
     """Return True if running on supported OS, else False"""
-    if OSHelper.is_windows() and scanner.scanner_supported_os() == CONSTANTS.WINDOWS:
+    if OSHelper.is_windows() and scanner.scanner_supported_os() == _CONSTANTS.WINDOWS:
         return True
-    elif OSHelper.is_linux() and scanner.scanner_supported_os() == CONSTANTS.LINUX:
+    elif OSHelper.is_linux() and scanner.scanner_supported_os() == _CONSTANTS.LINUX:
         return True
 
     return False
@@ -93,9 +94,7 @@ def display_csv(ap_list: List[AccessPoint]):
             print(f'{ssid_info},{bssid_info}')
 
 
-# ============================================================================================================================
-# == Main Entrypoint =========================================================================================================   
-def main() -> int:
+def _setup_parser(argv: list) -> argparse.ArgumentParser:
     desc = 'Scan for wi-fi access points (Networks)'
     epilog = '''
 This utility will scan for network APs (Access Points) using underlying OS utilities
@@ -106,14 +105,10 @@ and list related information.
 
 '''
     development_mode = False
-    for arg in sys.argv:
-        if arg == '-d':
-            development_mode = True
-            sys.argv.remove('-d')
-            break
-
-    parser = argparse.ArgumentParser(prog="dt-apscanner", 
-                                     description=desc, formatter_class=argparse.RawTextHelpFormatter,
+    if '-d' in sys.argv:
+        development_mode = True
+        sys.argv.remove('-d')
+    parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawTextHelpFormatter,
                                      epilog=epilog)
     parser.add_argument('-i', '--interface', type=str, default=None, metavar='<iface>', help='Interface to use, default=first wireless adapter discovered')
     parser.add_argument('-v', '--verbose', action='count', default=0, help='Debug/verbose output to console')
@@ -128,6 +123,12 @@ and list related information.
         parser.add_argument('-t', '--test', type=str, default=None, metavar='<filename>', help='Use test data, specify filename')
         parser.add_argument('-s', '--save', type=str, default=None, metavar='<filename>', help='Filename to save (os scan) command output in')
 
+    return parser
+
+# ============================================================================================================================
+# == Main Entrypoint =========================================================================================================   
+def main() -> int:
+    parser = _setup_parser(sys.argv)
     args = parser.parse_args()
 
     LOG_LVL = "INFO"
@@ -141,9 +142,9 @@ and list related information.
     h_console = LOGGER.add(sink=sys.stderr, level=LOG_LVL, format=lh.DEFAULT_CONSOLE_LOGFMT)  # noqa: F841
     ScannerBase.logging_level = LOG_LVL
     
-    header_width = len(desc) + 60
-    title = f'{parser.prog} v{ProjectHelper.determine_version(parser.prog)}'.center(header_width-4, ' ')
-    display_desc = desc.center(header_width-4, ' ')
+    header_width = len(parser.description) + 60
+    title = f'{parser.prog} v{ProjectHelper.determine_version("dt-apscanner")}'.center(header_width-4, ' ')
+    display_desc = parser.description.center(header_width-4, ' ')
     LOGGER.info('='*header_width)
     LOGGER.info(f'=={title}==')
     LOGGER.info('='*header_width)
@@ -152,12 +153,12 @@ and list related information.
     LOGGER.info('')
     LOGGER.info('Validate command line options')
     
-    if development_mode:
-        LOGGER.warning('- Development mode enabled')
-    else:
-        # Disable development mode functionality
-        args.test = False
-        args.save = False
+    # if development_mode:
+    #     LOGGER.warning('- Development mode enabled')
+    # else:
+    #     # Disable development mode functionality
+    #     args.test = False
+    #     args.save = False
 
     wifi_adapters = identify_wifi_adapters()
     if wifi_adapters is None:
@@ -196,7 +197,6 @@ and list related information.
             LOGGER.warning('- TEST MODE: save output option ignored')
             args.save = None
     else:
-        # if not scanner.os_check():
         if not os_check(scanner):
             LOGGER.critical(f'Invalid scanner - {scanner.__class__.__name__} only valid for {scanner.scanner_supported_os()}')
             return -5

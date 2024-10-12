@@ -1,4 +1,4 @@
-# ap_scanner
+# dt_apscanner
 
 
 ## Command Line Access Point (AP) scanning tool 
@@ -13,20 +13,20 @@ This python utility will scan for network Access Points (APs) using underlying O
 
 ### <u>Install:</u>
 ```
-pip install ap_scanner
+pip install dt-apscanner
 ```
 
 or for source code:
 
 ```
-git clone https://github.com/JavaWiz1/ap_scanner.git
+git clone https://github.com/JavaWiz1/dt-apscanner.git
 ```
 
 Note: poetry is used for dependency management and packaging
 
 ### <u>Usage:</u>
 ```
-usage: ap_scanner [-h] [-i <iface>] [-r] [-j] [-c] [-v] [--nmcli] [--iwlist] [--iw] [--netsh]
+usage: dt_apscanner [-h] [-i <iface>] [-r] [-j] [-c] [-v] [--nmcli] [--iwlist] [--iw] [--netsh]
 
 Scan for wi-fi access points (Networks)
 
@@ -54,9 +54,9 @@ and list related information.
 ### <u>Examples:</u>
 Windows - trigger re-scan to get most current list of access points
 ```
-> ap_scanner -r
+> dt_apscanner -r
 ===========================================================
-==                   ap_scanner v0.1.1                   ==
+==                  dt_apscanner v0.1.2                  ==
 ===========================================================
 ==        Scan for wi-fi access points (Networks)        ==
 ===========================================================
@@ -90,9 +90,9 @@ ThePond                   WPA2-Personal   CCMP       7c:80:26:01:70:de   51%  80
 
 Linux - Use wlan2 connection for scan and use Network Manager (nmcli) for discovery
 ```
-> ap_scanner -i wlan2 --nmcli
+> dt_apscanner -i wlan2 --nmcli
 ===========================================================
-==                   ap_scanner v0.1.1                   ==
+==                   dt_apscanner v0.1.1                   ==
 ===========================================================
 ==        Scan for wi-fi access points (Networks)        ==
 ===========================================================
