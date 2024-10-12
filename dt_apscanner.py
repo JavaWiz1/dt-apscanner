@@ -1,7 +1,7 @@
 import argparse
 import json
 import sys
-from typing import List
+from typing import List, Tuple
 
 import dt_tools.logger.logging_helper as lh
 from dt_tools.misc.helpers import ObjectHelper
@@ -94,7 +94,7 @@ def display_csv(ap_list: List[AccessPoint]):
             print(f'{ssid_info},{bssid_info}')
 
 
-def _setup_parser(argv: list) -> argparse.ArgumentParser:
+def _setup_parser(argv: list) -> Tuple[argparse.ArgumentParser, bool]:
     desc = 'Scan for wi-fi access points (Networks)'
     epilog = '''
 This utility will scan for network APs (Access Points) using underlying OS utilities
@@ -123,12 +123,12 @@ and list related information.
         parser.add_argument('-t', '--test', type=str, default=None, metavar='<filename>', help='Use test data, specify filename')
         parser.add_argument('-s', '--save', type=str, default=None, metavar='<filename>', help='Filename to save (os scan) command output in')
 
-    return parser
+    return parser, development_mode
 
 # ============================================================================================================================
 # == Main Entrypoint =========================================================================================================   
 def main() -> int:
-    parser = _setup_parser(sys.argv)
+    parser, development_mode = _setup_parser(sys.argv)
     args = parser.parse_args()
 
     LOG_LVL = "INFO"
@@ -153,12 +153,12 @@ def main() -> int:
     LOGGER.info('')
     LOGGER.info('Validate command line options')
     
-    # if development_mode:
-    #     LOGGER.warning('- Development mode enabled')
-    # else:
-    #     # Disable development mode functionality
-    #     args.test = False
-    #     args.save = False
+    if development_mode:
+        LOGGER.warning('- Development mode enabled')
+    else:
+        # Disable development mode functionality
+        args.test = False
+        args.save = False
 
     wifi_adapters = identify_wifi_adapters()
     if wifi_adapters is None:
